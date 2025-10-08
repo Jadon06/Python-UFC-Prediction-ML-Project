@@ -3,13 +3,13 @@ import pandas as pd
 import requests
 
 fighter1 = input("Enter a fighter: ").title().strip()
-last_name_initial = fighter1.split(" ", 1)[1][0].lower()
+last_name_initial1 = fighter1.split(" ", 1)[1][0].lower()
 
-fighter2 = input("Enter a fighter: ").title().strip()
-last_name_initial2 = fighter2.split(" ", 1)[1][0].lower()
+#fighter2 = input("Enter a fighter: ").title().strip()
+#last_name_initial2 = fighter2.split(" ", 1)[1][0].lower()
 
-All_fighters_inital1 = 'http://ufcstats.com/statistics/fighters?char='+last_name_initial+'&page=all'
-All_fighters_inital2 = 'http://ufcstats.com/statistics/fighters?char='+last_name_initial2+'&page=all'
+All_fighters_inital1 = 'http://ufcstats.com/statistics/fighters?char='+last_name_initial1+'&page=all'
+#All_fighters_inital2 = 'http://ufcstats.com/statistics/fighters?char='+last_name_initial2+'&page=all'
 
 class FighterInfo:
     def __init__(self, data, fighter):
@@ -51,7 +51,7 @@ class FighterInfo:
             link for i, link in enumerate(self.urls)
             if link not in self.urls[:i]]
         self.urls = [sublist for sublist in self.urls if sublist]
-    
+
     def set_dataframe_urls(self):
             self.dataframe['UFC Link'] = self.urls
             return(self.dataframe)
@@ -59,10 +59,10 @@ class FighterInfo:
     def find_fighter(self):
         fighter_name_fixed = self.fighter.title().strip()
         fighter_split_name = self.fighter.split(" ")
-
+        
         fighter_firstname = fighter_split_name[0]
-        fighter_lastname = fighter_split_name[1]
-
+        fighter_lastname = " ".join(fighter_split_name[1:])
+        
         mask = (
             (self.dataframe['First'] == fighter_firstname) & 
             (self.dataframe['Last'] == fighter_lastname)
@@ -71,7 +71,7 @@ class FighterInfo:
         index = self.dataframe.index[mask]
         self.link = list(self.dataframe.loc[index, 'UFC Link'])
         return(self.dataframe.iloc[index])
-
+    
     def get_fighter_info(self):
         url = self.link[0]
         page = requests.get(url)
@@ -114,9 +114,12 @@ class FighterInfo:
             self.dataframe_fighthistory["Fighter"].astype(str).str.split(" ", expand=True)
         )
 
-        self.dataframe_fighthistory["Fighter"] = split_names[0] + " " + split_names[1]
-        self.dataframe_fighthistory["Opponent"] = split_names[2] + " " + split_names[3]
-
+        self.dataframe_fighthistory["Fighter"] = (
+            split_names.loc[:, 0:1].apply(lambda row: " ".join(row.dropna()), axis=1)
+        )
+        self.dataframe_fighthistory["Opponent"] = (
+            split_names.loc[:, 2:].apply(lambda row: " ".join(row.dropna()), axis=1)
+        )
 
         self.dataframe_fighthistory[["Str_fighter", "Str_opponent"]] = (
             self.dataframe_fighthistory["Str"].astype(str).str.split(" ", expand=True)
@@ -129,11 +132,30 @@ class FighterInfo:
         reorder = [
             "W/L", "Fighter", "Opponent", "Kd_fighter", "Kd_opponent",
             "Str_fighter", "Str_opponent", "Td_fighter", "Td_opponent",
-            "Sub_fighter", "Sub_opponent", "Event", "Method", "Time"
+            "Sub_fighter", "Sub_opponent", "Event", "Method", "Round", "Time"
         ]
-
+        self.dataframe_fighthistory['Round'] = self.dataframe_fighthistory['Round'].astype(int)
         self.dataframe_fighthistory = self.dataframe_fighthistory[reorder]  
-    
+
+    def get_opponents_stance(self):
+        stances = []
+        opponents = self.dataframe_fighthistory['Opponent'].tolist()
+        stance_df = pd.DataFrame({"Opponents":opponents})
+        last_name_initials = [opponent.split(" ", 1)[1][0] for opponent in opponents]
+        for i in range(len(opponents)):
+            fighters_link = 'http://ufcstats.com/statistics/fighters?char='+last_name_initials[i]+'&page=all'
+            fighter = FighterInfo(fighters_link, opponents[i])
+            fighter.get_data()
+            fighter.get_headers()
+            fighter.set_dataframe()
+            fighter.get_urls()
+            fighter.set_dataframe_urls()
+            temp_df = fighter.find_fighter()
+            stance = temp_df['Stance'].iloc[0]
+            stances.append(stance)
+        stance_df["Stance"] = stances
+        return(stance_df)
+            
     def run_all(self):
         self.get_data()
         self.get_headers()
@@ -147,13 +169,23 @@ class FighterInfo:
     
     def Display(self):
         return(self.dataframe_fighthistory)
-        
+    
+
 F1_info = FighterInfo(All_fighters_inital1, fighter1)
 F1_info.run_all()
 fighthistory1 = F1_info.Display()
+#found = F1_info.find_fighter()
+#print(found)
 print(fighthistory1)
 
-F2_info = FighterInfo(All_fighters_inital2, fighter2)
-F2_info.run_all()
-fighthistory2 = F2_info.set_dataframe_urls()
-print(fighthistory2)
+#F2_info = FighterInfo(All_fighters_inital2, fighter2)
+#F2_info.run_all()
+#fighthistory2 = F2_info.set_dataframe_urls()
+#print(fighthistory2)
+    
+test = FighterInfo(All_fighters_inital1, fighter1)
+test.run_all()
+test.Display()
+
+#df = test.get_opponents_stance()
+#print(df)
