@@ -16,7 +16,14 @@ columns_to_convert_to_int = ["Kd_fighter", "Kd_opponent", "Str_fighter", "Str_op
 for column in columns_to_convert_to_int:
     dffh1[column] = [int(char) for char in dffh1[column]]
 
-average_strikes = [dffh1["Str_fighter"]/dffh1["Round"]]
+#print(dffh1['Str_fighter'])
+strikes_landed_per_minute = (dffh1['Round']*5)*float(p1.stats['SLpM'])
+minutes = dffh1['Round']*5
+dffh1['TIM'] = minutes
+dffh1['SLPM'] = strikes_landed_per_minute
+average_strikes = dffh1["Str_fighter"]/dffh1["Round"]
+#print(average_strikes)
+dffh1['avg_Str_fighter'] = average_strikes.reset_index(drop=True)
 testing_data = {'Average_Strikes' : average_strikes}
 print(testing_data)
 
