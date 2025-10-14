@@ -155,7 +155,29 @@ class FighterInfo:
             stances.append(stance)
         stance_df["Stance"] = stances
         return(stance_df)
-            
+    
+    def get_career_stats(self):
+        url = self.link[0]
+        page = requests.get(url)
+        soup = BeautifulSoup(page.text, 'html.parser')
+        li_data = soup.find_all("li", class_='b-list__box-list-item b-list__box-list-item_type_block')
+        career_stats = []
+        for row in li_data:
+            career_stats.append(row.get_text(strip=True))
+        career_stats = career_stats[5::]
+        career_stats.pop(4)
+        keys = []
+        values = []
+        for stat in career_stats:
+            keys.append(stat.split(':')[0])
+            values.append(stat.split(':')[1])
+        for i in range(len(values)):
+            if '%' in values[i]:
+                values[i] = int(values[i][:-1])/100
+        stats = dict(zip(keys, values))
+        return stats
+
+
     def run_all(self):
         self.get_data()
         self.get_headers()
@@ -173,6 +195,7 @@ class FighterInfo:
 
 F1_info = FighterInfo(All_fighters_inital1, fighter1)
 F1_info.run_all()
+stats = F1_info.get_career_stats()
 fighthistory1 = F1_info.Display()
 #found = F1_info.find_fighter()
 #print(found)
